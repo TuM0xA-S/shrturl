@@ -15,6 +15,7 @@ type Shrt struct {
 	db      *redis.Client
 	baseURL string
 	expTime time.Duration
+	*echo.Echo
 }
 
 type ShrtCfg struct {
@@ -26,13 +27,11 @@ type ShrtCfg struct {
 func NewShrt(ctx context.Context, cfg ShrtCfg) *Shrt {
 	const api = "NewShrt"
 
-	return &Shrt{db: cfg.DB, baseURL: cfg.BaseURL, expTime: cfg.ExpirationTime}
-}
-
-func (s *Shrt) Setup(e *echo.Echo) {
-	e.GET("/", s.root)
-	e.POST("/", s.makeShrt)
-	e.GET("/:code", s.useShrt)
+	res := &Shrt{db: cfg.DB, baseURL: cfg.BaseURL, expTime: cfg.ExpirationTime, Echo: echo.New()}
+	res.GET("/", res.root)
+	res.POST("/", res.makeShrt)
+	res.GET("/:code", res.useShrt)
+	return res
 }
 
 func (s *Shrt) root(c echo.Context) error {
@@ -60,7 +59,11 @@ func (s *Shrt) makeShrt(c echo.Context) error {
 
 	var resp makeShrtResp
 	resp.URL = req.URL
-	resp.ShrtURL = s.baseURL + code
+	if s.baseURL == "" {
+		resp.ShrtURL = "http://" + c.Request().Host + "/" + code
+	} else {
+		resp.ShrtURL = s.baseURL + code
+	}
 	if s.expTime != 0 {
 		resp.ValidUntil = time.Now().Add(s.expTime)
 	}

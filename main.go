@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
@@ -23,13 +23,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	shrt := NewShrt(ctx, ShrtCfg{BaseURL: "http://localhost:1323/", DB: db})
-
-	e := echo.New()
-	e.Use(middleware.Logger(), middleware.Recover())
-
-	shrt.Setup(e)
+	shrt := NewShrt(ctx, ShrtCfg{DB: db, ExpirationTime: 10 * time.Second})
+	shrt.Use(middleware.Logger(), middleware.Recover())
 
 	// Start server
-	e.Logger.Fatal(e.Start(":1323"))
+	shrt.Logger.Fatal(shrt.Start(":1323"))
 }
